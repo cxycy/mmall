@@ -1,17 +1,25 @@
 package com.mmall.controller.portal;
 
 import com.mmall.common.Const;
+import com.mmall.common.RedisPool;
 import com.mmall.common.ResponseCode;
 import com.mmall.common.ServerResponse;
 import com.mmall.dao.UserMapper;
 import com.mmall.pojo.User;
 import com.mmall.service.IUserService;
+import com.mmall.util.CookieUtil;
+import com.mmall.util.JsonUtil;
+import com.mmall.util.RedisPoolUtil;
+import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.ResponseBody;
+import redis.clients.jedis.Jedis;
 
+import javax.servlet.http.HttpServletRequest;
+import javax.servlet.http.HttpServletResponse;
 import javax.servlet.http.HttpSession;
 
 @Controller
@@ -23,21 +31,31 @@ public class UserController {
 
     @RequestMapping(value="login.do",method = RequestMethod.POST)
     @ResponseBody //
-    public ServerResponse<User> login(String username, String password, HttpSession session){
-        ServerResponse<User> response = iUserService.login(username,password);
-
-        if(response.isSuccess()){
-            session.setAttribute(Const.CURRENT_USER, response.getData());
+    public ServerResponse<User> login(String username,
+                                      String password,
+                                      HttpSession session,
+                                      HttpServletResponse response){
+        ServerResponse<User> serverResponse = iUserService.login(username,password);
+        if(serverResponse.isSuccess()){
+            //session.setAttribute(Const.CURRENT_USER, response.getData());
+            CookieUtil.writeLoginToken(response,session.getId());
+            RedisPoolUtil.setEx(session.getId(), JsonUtil.obj2String(serverResponse.getData()),Const.RedisCacheTime.REDIS_SESSION_EXTIME);
         }
-        return response;
+        return serverResponse;
     }
 
     @RequestMapping(value = "logout.do",method = RequestMethod.POST)
     @ResponseBody
-    public ServerResponse<String> logout(HttpSession session){
-        session.removeAttribute(Const.CURRENT_USER);
-        ServerResponse<String> response = ServerResponse.createBySuccessMessage("Log Out");
-        return response;
+    public ServerResponse<String> logout(HttpServletRequest request,HttpServletResponse response){
+        //session.removeAttribute(Const.CURRENT_USER);
+        String token = CookieUtil.readLoginToken(request);
+        CookieUtil.delLoginToken(response, request);
+        RedisPoolUtil.del(token);
+        //Jedis jedis = RedisPool.getJedis();
+        String userString = RedisPoolUtil.get(token);
+        User user = JsonUtil.string2Obj(userString,User.class);
+        ServerResponse<String> Servereesponse = ServerResponse.createBySuccessMessage("Log Out");
+        return Servereesponse;
     }
 
     @RequestMapping(value = "register.do",method = RequestMethod.POST)
@@ -54,8 +72,15 @@ public class UserController {
 
     @RequestMapping(value = "get_user_info.do",method = RequestMethod.POST)
     @ResponseBody
-    public ServerResponse<User> getUserInfo(HttpSession session){
-        User user = (User)session.getAttribute(Const.CURRENT_USER);
+    public ServerResponse<User> getUserInfo(HttpServletRequest request){
+        //User user = (User)session.getAttribute(Const.CURRENT_USER);
+        String token = CookieUtil.readLoginToken(request);
+        if(StringUtils.isEmpty(token)){
+            return ServerResponse.createByErrorMessage("user haven't login in ");
+        }
+        //Jedis jedis = RedisPool.getJedis();
+        String userString = RedisPoolUtil.get(token);
+        User user = JsonUtil.string2Obj(userString,User.class);
         if(user!=null){
             return ServerResponse.createBySuccess(user);
         }
