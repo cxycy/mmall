@@ -49,8 +49,8 @@ public class UserController {
     public ServerResponse<String> logout(HttpServletRequest request,HttpServletResponse response){
         //session.removeAttribute(Const.CURRENT_USER);
         String token = CookieUtil.readLoginToken(request);
-        CookieUtil.delLoginToken(response, request);
         RedisPoolUtil.del(token);
+        CookieUtil.delLoginToken(response, request);
         //Jedis jedis = RedisPool.getJedis();
         String userString = RedisPoolUtil.get(token);
         User user = JsonUtil.string2Obj(userString,User.class);

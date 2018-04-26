@@ -75,7 +75,7 @@ public class RedisPoolUtil {
     public static Long del(String key){
         Jedis jedis = null;
         Long result = null;
-
+        log.info("need to delete key {}",key);
         try {
             jedis = RedisPool.getJedis();
             result = jedis.del(key);
