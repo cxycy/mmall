@@ -2,11 +2,10 @@ package com.mmall.util;
 
 import com.mmall.common.RedisShardedPool;
 import lombok.extern.slf4j.Slf4j;
-import redis.clients.jedis.Jedis;
 import redis.clients.jedis.ShardedJedis;
 
 @Slf4j
-public class RedisPoolUtil {
+public class RedisShardedPoolUtil {
 
     public static Long expire(String key,Integer exTime){
         ShardedJedis jedis = null;
@@ -92,14 +91,14 @@ public class RedisPoolUtil {
     public static void main(String[] args) {
 
 
-        RedisPoolUtil.set("key","value");
-        String value = RedisPoolUtil.get("key");
+        RedisShardedPoolUtil.set("key","value");
+        String value = RedisShardedPoolUtil.get("key");
 
-        RedisPoolUtil.setEx("key1","value1",60*10);
+        RedisShardedPoolUtil.setEx("key1","value1",60*10);
 
-        RedisPoolUtil.expire("key",10*60);
+        RedisShardedPoolUtil.expire("key",10*60);
 
-        RedisPoolUtil.del("key");
+        RedisShardedPoolUtil.del("key");
 
         System.out.println("end");
     }
